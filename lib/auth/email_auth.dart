@@ -124,15 +124,24 @@ class _EmailAuthState extends State<EmailAuth> {
     if (!isValid(email, password)) return;
 
     if (password != confirm) {
-      setState(() => errorMessage = 'Passwords do not match');
+      setState(() {
+        errorMessage = 'Passwords do not match';
+        isLoading = false;
+      });
       return;
     }
     if (name.isEmpty) {
-      setState(() => errorMessage = 'Name is required');
+      setState(() {
+        errorMessage = 'Name is required';
+        isLoading = false;
+      });
       return;
     }
     if (username.isEmpty) {
-      setState(() => errorMessage = 'Username is required');
+      setState(() {
+        errorMessage = 'Username is required';
+        isLoading = false;
+      });
       return;
     }
 
@@ -143,7 +152,10 @@ class _EmailAuthState extends State<EmailAuth> {
             .where('username', isEqualTo: username)
             .get();
     if (query.docs.isNotEmpty) {
-      usernameTaken = true;
+      setState(() {
+        usernameTaken = true;
+        isLoading = false;
+      });
       return;
     }
 
@@ -160,7 +172,10 @@ class _EmailAuthState extends State<EmailAuth> {
       if (!mounted) return;
       Navigator.pop(context);
     } catch (e) {
-      setState(() => errorMessage = 'Registration failed');
+      setState(() {
+        errorMessage = 'Registration failed';
+        isLoading = false;
+      });
       return;
     }
   }

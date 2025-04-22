@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:parla/screens/chat_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -73,9 +74,23 @@ class _SearchScreenState extends State<SearchScreen> {
                           }
                           final user =
                               users[0]; //There can only be one user with a username
-                          return ListTile(
-                            title: Text(user['username']),
-                            subtitle: Text(user['name']),
+                          return SizedBox(
+                            height: 100,
+                            child: ListTile(
+                              title: Text(user['username']),
+                              subtitle: Text(user['name']),
+                              onTap: () {
+                                // Navigate to the user's profile screen
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) =>
+                                            ChatScreen(userId: user.id),
+                                  ),
+                                );
+                              },
+                            ),
                           );
                         },
                       ),

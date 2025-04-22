@@ -5,6 +5,11 @@ import 'package:flutter/material.dart';
 class AuthProvider extends ChangeNotifier {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   User? _currentUser;
+  User? get currentUser => _currentUser;
+  User get nonNullUser {
+    assert(_currentUser != null, 'User is null');
+    return _currentUser!;
+  }
 
   AuthProvider() {
     _currentUser = _firebaseAuth.currentUser;
@@ -13,8 +18,6 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
     });
   }
-
-  User? get currentUser => _currentUser;
 
   Future<void> signInWithEmailAndPassword(String email, String password) async {
     try {
@@ -34,10 +37,12 @@ class AuthProvider extends ChangeNotifier {
     Map<String, dynamic> userData,
   ) async {
     try {
-      await _firebaseAuth.createUserWithEmailAndPassword(
+      final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
+      await userCredential.user?.updateProfile(displayName: userData['name']);
+      _currentUser?.reload();
       // save the userdata in users/{userId}/ in firestore
       await FirebaseFirestore.instance
           .collection('users')
