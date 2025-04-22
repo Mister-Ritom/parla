@@ -166,7 +166,6 @@ class _EmailAuthState extends State<EmailAuth> {
         'name': name,
         'email': email,
         'username': username,
-        'password': password,
         'createdAt': DateTime.now(),
       });
       if (!mounted) return;
