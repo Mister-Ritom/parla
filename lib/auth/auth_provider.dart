@@ -23,6 +23,7 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> _initialize() async {
     _user = _supabase.auth.currentUser;
+    notifyListeners();
     _supabase.auth.onAuthStateChange.listen((data) {
       _user = data.session?.user;
       notifyListeners();

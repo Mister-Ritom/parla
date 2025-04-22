@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:parla/auth/auth_provider.dart';
-import 'package:parla/screens/email_auth.dart';
+import 'package:parla/auth/email_auth.dart';
 import 'package:parla/screens/home_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -10,6 +10,15 @@ class AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    //log the user state
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    authProvider.addListener(() {
+      if (authProvider.isAuthenticated) {
+        debugPrint('User is authenticated');
+      } else {
+        debugPrint('User is not authenticated');
+      }
+    });
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
         return authProvider.isAuthenticated
@@ -78,50 +87,6 @@ class AuthScren extends StatelessWidget {
                   const SizedBox(width: 10),
                   const Text('Continue with Email'),
                 ],
-              ),
-            ),
-            SizedBox(height: 10),
-            //line
-            const Text(
-              'Or',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-            SizedBox(height: 10),
-            ElevatedButton(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    FontAwesomeIcons.google,
-                  ), // Replace with appropriate icon
-                  const SizedBox(width: 10),
-                  const Text('Continue with Google'),
-                ],
-              ),
-              onPressed: () {
-                // Handle Google login
-              },
-            ),
-            SizedBox(height: 10),
-            Visibility(
-              //show only if its ios ipad os or macos
-              visible:
-                  Theme.of(context).platform == TargetPlatform.iOS ||
-                  Theme.of(context).platform == TargetPlatform.macOS,
-              child: ElevatedButton(
-                onPressed: () {
-                  // Handle Apple login
-                },
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      FontAwesomeIcons.apple,
-                    ), // Replace with appropriate icon
-                    const SizedBox(width: 10),
-                    const Text('Continue with Apple'),
-                  ],
-                ),
               ),
             ),
           ],
