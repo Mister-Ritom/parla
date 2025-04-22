@@ -1,5 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -9,8 +9,27 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  final SupabaseClient supabase = Supabase.instance.client;
   final TextEditingController _searchController = TextEditingController();
+  Future<QuerySnapshot>? _searchResults;
+
+  void _searchUsers() {
+    final queryText = _searchController.text.trim();
+    if (queryText.isNotEmpty) {
+      setState(() {
+        _searchResults =
+            FirebaseFirestore.instance
+                .collection('users')
+                .where('username', isEqualTo: queryText)
+                .get();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,50 +42,47 @@ class _SearchScreenState extends State<SearchScreen> {
             TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                labelText: 'Search',
-                suffixIcon: Icon(Icons.search),
+                labelText: 'Search by username',
+                suffixIcon: IconButton(
+                  icon: Icon(Icons.search),
+                  onPressed: _searchUsers,
+                ),
               ),
+              onSubmitted: (_) => _searchUsers(),
             ),
-
             SizedBox(height: 16),
             Expanded(
-              child: FutureBuilder(
-                future:
-                    supabase
-                        .from('profiles')
-                        .stream(primaryKey: ['id'])
-                        .eq('username', _searchController.text)
-                        .order('created_at', ascending: false)
-                        .first,
-
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  }
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return Center(child: Text('No users found'));
-                  }
-
-                  final users = snapshot.data;
-                  if (users == null || users.isEmpty) {
-                    return Center(child: Text('No users found'));
-                  }
-                  return Text(users.toString());
-                  // return ListView.builder(
-                  //   itemCount: users.length,
-                  //   itemBuilder: (context, index) {
-                  //     final user = users[index];
-                  //     return ListTile(
-                  //       title: Text(user['username']),
-                  //       subtitle: Text(user['email']),
-                  //     );
-                  //   },
-                  // );
-                },
-              ),
+              child:
+                  _searchResults == null
+                      ? Center(child: Text('Enter a username to search'))
+                      : FutureBuilder<QuerySnapshot>(
+                        future: _searchResults,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return Center(child: CircularProgressIndicator());
+                          }
+                          if (snapshot.hasError) {
+                            return Center(
+                              child: Text('Error: ${snapshot.error}'),
+                            );
+                          }
+                          final users = snapshot.data?.docs ?? [];
+                          if (users.isEmpty) {
+                            return Center(child: Text('No users found'));
+                          }
+                          return ListView.builder(
+                            itemCount: users.length,
+                            itemBuilder: (context, index) {
+                              final user = users[index];
+                              return ListTile(
+                                title: Text(user['username']),
+                                subtitle: Text(user['name']),
+                              );
+                            },
+                          );
+                        },
+                      ),
             ),
           ],
         ),

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1022682226044",
+    "project_id": "parla-debug",
+    "storage_bucket": "parla-debug.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1022682226044:android:74f5a8ababb30f822d18f9",
+        "android_client_info": {
+          "package_name": "site.ritom.parla"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCpLimomqqyhUV-dGnSbeOP4LREIjcfdec"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

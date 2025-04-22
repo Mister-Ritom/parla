@@ -1,8 +1,7 @@
-import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:parla/auth/auth_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class EmailAuth extends StatefulWidget {
   const EmailAuth({super.key});
@@ -16,8 +15,11 @@ class _EmailAuthState extends State<EmailAuth> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _nameController = TextEditingController();
+  final _usernameController = TextEditingController();
 
   String errorMessage = '';
+  bool usernameTaken = false;
+  bool isLoading = false;
   bool showPassword = false;
 
   bool isValid(String email, String password) {
@@ -44,8 +46,6 @@ class _EmailAuthState extends State<EmailAuth> {
       );
       return false;
     }
-
-    setState(() => errorMessage = '');
     return true;
   }
 
@@ -53,7 +53,7 @@ class _EmailAuthState extends State<EmailAuth> {
     required TextEditingController controller,
     required String label,
     bool isPassword = false,
-    bool isConfirmPassword = false,
+    bool isUsername = false,
   }) {
     return TextField(
       controller: controller,
@@ -71,17 +71,13 @@ class _EmailAuthState extends State<EmailAuth> {
                     });
                   },
                 )
+                : isUsername && usernameTaken
+                ? const Icon(Icons.error, color: Colors.red)
+                : isUsername && !usernameTaken
+                ? const Icon(Icons.check, color: Colors.green)
                 : null,
         labelText: label,
-        errorText:
-            errorMessage.isNotEmpty &&
-                    (label == 'Email' ||
-                        label == 'Password' ||
-                        (isConfirmPassword &&
-                            _passwordController.text !=
-                                _confirmPasswordController.text))
-                ? errorMessage
-                : null,
+        errorText: errorMessage.isNotEmpty ? errorMessage : null,
         filled: true,
         fillColor: Theme.of(
           context,
@@ -93,7 +89,8 @@ class _EmailAuthState extends State<EmailAuth> {
 
   Future<void> handleLogin() async {
     setState(() {
-      errorMessage = "loading";
+      isLoading = true;
+      errorMessage = '';
     });
     final email = _emailController.text.trim();
     final password = _passwordController.text;
@@ -101,25 +98,28 @@ class _EmailAuthState extends State<EmailAuth> {
     if (!isValid(email, password)) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    User? user = await authProvider.signIn(email, password);
 
-    if (!mounted) return;
-
-    if (user == null) {
-      setState(() => errorMessage = 'Invalid email or password');
-    } else {
+    try {
+      await authProvider.signInWithEmailAndPassword(email, password);
+      if (!mounted) return;
       Navigator.pop(context);
+    } catch (e) {
+      setState(() => errorMessage = 'Invalid email or password');
+      return;
     }
   }
 
   Future<void> handleRegistration() async {
     setState(() {
-      errorMessage = "loading";
+      isLoading = true;
+      errorMessage = '';
+      usernameTaken = false;
     });
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     final confirm = _confirmPasswordController.text;
     final name = _nameController.text.trim();
+    final username = _usernameController.text.trim();
 
     if (!isValid(email, password)) return;
 
@@ -131,112 +131,113 @@ class _EmailAuthState extends State<EmailAuth> {
       setState(() => errorMessage = 'Name is required');
       return;
     }
-
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    User? user = await authProvider.signUp(email, password, {
-      'display_name': name,
-    });
-    if (user == null) {
-      throw "Something went wrong; user is null";
-    }
-    //add the userdata to a profiles collection in supabase database
-    final supabase = Supabase.instance.client;
-
-    final response = await supabase.from('profiles').insert({
-      'user_id': user.id,
-      'email': email,
-      'display_name': name,
-      'username':
-          '$name${(100000 + (DateTime.now().millisecondsSinceEpoch % 900000)).toString().substring(0, 6)}',
-    });
-
-    if (response != null && response.error != null) {
-      setState(
-        () =>
-            errorMessage =
-                'Failed to save user profile: ${response.error!.message}',
-      );
+    if (username.isEmpty) {
+      setState(() => errorMessage = 'Username is required');
       return;
     }
 
-    if (!mounted) return;
+    //Check if username is already taken
+    final query =
+        await FirebaseFirestore.instance
+            .collection('users')
+            .where('username', isEqualTo: username)
+            .get();
+    if (query.docs.isNotEmpty) {
+      usernameTaken = true;
+      return;
+    }
 
-    setState(() => errorMessage = '');
-    Navigator.pop(context);
+    try {
+      if (!mounted) return;
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.registerWithEmailAndPassword(email, password, {
+        'name': name,
+        'email': email,
+        'username': username,
+        'password': password,
+        'createdAt': DateTime.now(),
+      });
+      if (!mounted) return;
+      Navigator.pop(context);
+    } catch (e) {
+      setState(() => errorMessage = 'Registration failed');
+      return;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (errorMessage == "loading") {
-      return Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(title: const Text('Email Authentication')),
-        body: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              RichText(
-                text: TextSpan(
-                  text: 'Hey 👋\n',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  children: [
-                    TextSpan(
-                      text: 'Join the ',
-                      style: Theme.of(context).textTheme.titleLarge,
+    return Visibility(
+      visible: !isLoading,
+      replacement: const Center(child: CircularProgressIndicator()),
+      child: DefaultTabController(
+        length: 2,
+        child: Scaffold(
+          appBar: AppBar(title: const Text('Email Authentication')),
+          body: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                RichText(
+                  text: TextSpan(
+                    text: 'Hey 👋\n',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
                     ),
-                    TextSpan(
-                      text: 'Encrypted ',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Theme.of(context).colorScheme.secondary,
+                    children: [
+                      TextSpan(
+                        text: 'Join the ',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      TextSpan(
+                        text: 'Encrypted ',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.secondary,
+                        ),
+                      ),
+                      TextSpan(
+                        text: 'World now',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                TabBar(
+                  indicator: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: Theme.of(context).focusColor.withValues(alpha: 0.2),
+                  ),
+                  tabs: [
+                    Card(
+                      child: Container(
+                        padding: EdgeInsets.all(8),
+                        width: 128,
+                        height: 64,
+                        child: Tab(icon: Icon(Icons.lock), text: 'Old User'),
                       ),
                     ),
-                    TextSpan(
-                      text: 'World now',
-                      style: Theme.of(context).textTheme.titleLarge,
+                    Card(
+                      child: Container(
+                        width: 128,
+                        height: 64,
+                        padding: EdgeInsets.all(8),
+                        child: Tab(
+                          icon: Icon(Icons.person_add),
+                          text: 'New Account',
+                        ),
+                      ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 20),
-              TabBar(
-                indicator: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: Theme.of(context).focusColor.withValues(alpha: 0.2),
-                ),
-                tabs: [
-                  Card(
-                    child: Container(
-                      padding: EdgeInsets.all(8),
-                      width: 128,
-                      height: 64,
-                      child: Tab(icon: Icon(Icons.lock), text: 'Old User'),
-                    ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: TabBarView(
+                    children: [buildLoginTab(), buildRegisterTab()],
                   ),
-                  Card(
-                    child: Container(
-                      width: 128,
-                      height: 64,
-                      padding: EdgeInsets.all(8),
-                      child: Tab(
-                        icon: Icon(Icons.person_add),
-                        text: 'New Account',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: TabBarView(
-                  children: [buildLoginTab(), buildRegisterTab()],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -272,6 +273,17 @@ class _EmailAuthState extends State<EmailAuth> {
       children: [
         buildTextField(controller: _nameController, label: 'Name'),
         const SizedBox(height: 10),
+        buildTextField(
+          controller: _usernameController,
+          label: 'Username',
+          isUsername: true,
+        ),
+        const SizedBox(height: 10),
+        if (usernameTaken)
+          const Text(
+            'Username already taken',
+            style: TextStyle(color: Colors.red),
+          ),
         buildTextField(controller: _emailController, label: 'Email'),
         const SizedBox(height: 10),
         buildTextField(
@@ -284,7 +296,6 @@ class _EmailAuthState extends State<EmailAuth> {
           controller: _confirmPasswordController,
           label: 'Confirm Password',
           isPassword: true,
-          isConfirmPassword: true,
         ),
         const SizedBox(height: 20),
         buildActionButton(

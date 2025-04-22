@@ -10,18 +10,9 @@ class AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    //log the user state
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    authProvider.addListener(() {
-      if (authProvider.isAuthenticated) {
-        debugPrint('User is authenticated');
-      } else {
-        debugPrint('User is not authenticated');
-      }
-    });
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
-        return authProvider.isAuthenticated
+        return authProvider.currentUser != null
             ? const HomeScreen()
             : const AuthScren();
       },

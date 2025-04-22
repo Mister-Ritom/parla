@@ -1,78 +1,59 @@
-import 'dart:developer';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
-class AuthProvider with ChangeNotifier {
-  final SupabaseClient _supabase = Supabase.instance.client;
-
-  User? _user;
-
-  User get user {
-    if (_user == null) {
-      throw Exception('User is not logged in');
-    }
-    return _user!;
-  }
+class AuthProvider extends ChangeNotifier {
+  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+  User? _currentUser;
 
   AuthProvider() {
-    _initialize();
-  }
-
-  bool get isAuthenticated => _user != null;
-
-  Future<void> _initialize() async {
-    _user = _supabase.auth.currentUser;
-    notifyListeners();
-    _supabase.auth.onAuthStateChange.listen((data) {
-      _user = data.session?.user;
+    _currentUser = _firebaseAuth.currentUser;
+    _firebaseAuth.authStateChanges().listen((User? user) {
+      _currentUser = user;
       notifyListeners();
     });
   }
 
-  Future<User?> signIn(String email, String password) async {
+  User? get currentUser => _currentUser;
+
+  Future<void> signInWithEmailAndPassword(String email, String password) async {
     try {
-      final response = await _supabase.auth.signInWithPassword(
+      await _firebaseAuth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
-      _user = response.user;
-      notifyListeners();
-      return response.user;
     } catch (e, stack) {
-      debugPrintStack(stackTrace: stack);
-      log("Error signing in: $e");
-      return null;
+      debugPrintStack(stackTrace: stack, label: 'Error signing in');
+      rethrow;
     }
   }
 
-  Future<User?> signUp(
+  Future<void> registerWithEmailAndPassword(
     String email,
     String password,
-    Map<String, dynamic> data,
+    Map<String, dynamic> userData,
   ) async {
     try {
-      AuthResponse res = await _supabase.auth.signUp(
+      await _firebaseAuth.createUserWithEmailAndPassword(
         email: email,
         password: password,
-        data: data,
       );
-      _user = res.user;
-      notifyListeners();
-      return res.user;
+      // save the userdata in users/{userId}/ in firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser?.uid)
+          .set(userData);
     } catch (e, stack) {
-      debugPrintStack(stackTrace: stack);
-      log("Error signing in: $e");
-      return null;
+      debugPrintStack(stackTrace: stack, label: 'Error registering user');
+      rethrow;
     }
   }
 
   Future<void> signOut() async {
     try {
-      await _supabase.auth.signOut();
-      _user = null;
-      notifyListeners();
-    } catch (e) {
+      await _firebaseAuth.signOut();
+    } catch (e, stack) {
+      debugPrintStack(stackTrace: stack, label: 'Error signing out');
       rethrow;
     }
   }
