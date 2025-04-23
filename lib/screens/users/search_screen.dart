@@ -85,8 +85,10 @@ class _SearchScreenState extends State<SearchScreen> {
                                   context,
                                   MaterialPageRoute(
                                     builder:
-                                        (context) =>
-                                            ChatScreen(userId: user.id),
+                                        (context) => ChatScreen(
+                                          userId: user.id,
+                                          username: user['username'],
+                                        ),
                                   ),
                                 );
                               },

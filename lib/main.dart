@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:parla/auth/auth_provider.dart';
 import 'package:parla/auth/auth_gate.dart';
@@ -8,6 +10,10 @@ import 'package:firebase_core/firebase_core.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Stop the firebase persistence for debug mode
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: !kDebugMode,
+  );
   runApp(
     ChangeNotifierProvider(create: (_) => AuthProvider(), child: const MyApp()),
   );
