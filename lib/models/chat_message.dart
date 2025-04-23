@@ -5,6 +5,7 @@ part 'chat_message.g.dart';
 @collection
 class ChatMessage {
   ChatMessage({
+    required this.iv,
     required this.Id,
     required this.chatId,
     required this.senderId,
@@ -14,8 +15,9 @@ class ChatMessage {
 
   @id
   int Id;
+  final String iv;
   final String chatId;
   final String senderId;
-  final String encryptedContent;
+  String encryptedContent;
   final DateTime sentAt;
 }
