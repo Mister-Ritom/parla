@@ -13,18 +13,6 @@ class EncryptionManager {
     }; // Return the Encrypted object
   }
 
-  static String decryptMessage(Encrypted encrypted, String token) {
-    final key = Key.fromUtf8(token.substring(0, 32));
-    final encrypter = Encrypter(AES(key));
-    // The IV is already part of the Encrypted object
-    return encrypter.decrypt(encrypted);
-  }
-
-  // Helper function to convert Encrypted object to base64 string for storage/transmission
-  static String encryptToBase64(Encrypted encrypted) {
-    return encrypted.base64;
-  }
-
   // Helper function to create Encrypted object from a base64 string and the IV
   static String decryptFromBase64(Map<String, String> data, String token) {
     final encryptedBase64 = data['base64']!;
