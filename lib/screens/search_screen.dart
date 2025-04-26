@@ -19,7 +19,7 @@ class _SearchScreenState extends State<SearchScreen> {
         _searchResults =
             FirebaseFirestore.instance
                 .collection('users')
-                .where('username', isEqualTo: queryText)
+                .where('username', isEqualTo: queryText.toLowerCase())
                 .get();
       });
     }

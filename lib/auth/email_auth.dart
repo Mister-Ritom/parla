@@ -165,7 +165,7 @@ class _EmailAuthState extends State<EmailAuth> {
       await authProvider.registerWithEmailAndPassword(email, password, {
         'name': name,
         'email': email,
-        'username': username,
+        'username': username.toLowerCase(),
         'createdAt': DateTime.now(),
       });
       if (!mounted) return;
