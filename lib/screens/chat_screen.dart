@@ -20,12 +20,15 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController messageController = TextEditingController();
   final ScrollController scrollController = ScrollController();
+  late final String currentUserId;
   String? token;
 
   @override
   void initState() {
     super.initState();
-    setupToken(curr);
+    currentUserId =
+        Provider.of<AuthProvider>(context, listen: false).nonNullUser.uid;
+    setupToken();
     debugPrint("ChatScreen initialized with receiverId: ${widget.receiverId}");
     debugPrint("Token: $token");
   }
@@ -40,7 +43,7 @@ class _ChatScreenState extends State<ChatScreen> {
     token = newToken;
   }
 
-  Future<void> setupToken(String currentUserId) async {
+  Future<void> setupToken() async {
     final existingToken = await TokenManager.getToken(widget.receiverId);
     if (existingToken != null) {
       token = existingToken;
@@ -61,8 +64,6 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> sendMessage() async {
-    final currentUser =
-        Provider.of<AuthProvider>(context, listen: false).nonNullUser;
     final message = messageController.text.trim();
     if (message.isEmpty || token == null) return;
 
@@ -72,14 +73,14 @@ class _ChatScreenState extends State<ChatScreen> {
       'iv': encrypted['iv'],
       'isRead': false,
       'timestamp': FieldValue.serverTimestamp(),
-      'senderId': currentUser.uid,
+      'senderId': currentUserId,
       'receiverId': widget.receiverId,
     };
 
     final userRef =
         FirebaseFirestore.instance
             .collection('messages')
-            .doc(currentUser.uid)
+            .doc(currentUserId)
             .collection('receivers')
             .doc(widget.receiverId)
             .collection('chat')
@@ -90,7 +91,7 @@ class _ChatScreenState extends State<ChatScreen> {
             .collection('messages')
             .doc(widget.receiverId)
             .collection('receivers')
-            .doc(currentUser.uid)
+            .doc(currentUserId)
             .collection('chat')
             .doc();
 
@@ -108,9 +109,6 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget buildMessageList(List<QueryDocumentSnapshot<Object?>> messages) {
-    final currentUserId =
-        Provider.of<AuthProvider>(context, listen: false).nonNullUser.uid;
-
     return ListView.builder(
       reverse: true,
       controller: scrollController,
@@ -154,8 +152,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUserId = Provider.of<AuthProvider>(context).nonNullUser.uid;
-
     return Scaffold(
       appBar: AppBar(title: Text('Chat with ${widget.receiverId}')),
       body: Column(
