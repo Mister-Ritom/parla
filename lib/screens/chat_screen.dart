@@ -165,7 +165,9 @@ class _ChatScreenState extends State<ChatScreen> {
           return const Center(child: Text('Error loading token'));
         } else {
           String token = snapshot.data as String;
-
+          debugPrint('Token: $token');
+          debugPrint('Current User ID: $currentUserId');
+          debugPrint('Receiver ID: ${widget.receiverId}');
           return Scaffold(
             appBar: AppBar(title: Text('Chat with ${widget.receiverId}')),
             body: Column(
