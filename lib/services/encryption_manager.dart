@@ -1,5 +1,6 @@
+import 'dart:developer';
+
 import 'package:encrypt/encrypt.dart';
-import 'package:flutter/material.dart';
 
 class EncryptionManager {
   static Map<String, String> encryptMessage(String message, String token) {
@@ -31,7 +32,7 @@ class EncryptionManager {
       final decrypted = encrypter.decrypt(encrypted, iv: iv);
       return decrypted;
     } catch (e) {
-      debugPrint('Error decrypting message: $e');
+      log('Error decrypting message: $e');
       return 'Error decrypting message';
     }
   }
