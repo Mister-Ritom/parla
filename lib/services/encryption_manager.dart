@@ -1,4 +1,5 @@
 import 'package:encrypt/encrypt.dart';
+import 'package:flutter/material.dart';
 
 class EncryptionManager {
   static Map<String, String> encryptMessage(String message, String token) {
@@ -25,6 +26,13 @@ class EncryptionManager {
     // The 'encrypt' package conveniently stores the IV within the Encrypted object.
     // So, we can directly use the base64 encoded string.
     final encrypted = Encrypted.fromBase64(encryptedBase64);
-    return encrypter.decrypt(encrypted, iv: iv);
+    //try catch so if the token is wrong it will not crash
+    try {
+      final decrypted = encrypter.decrypt(encrypted, iv: iv);
+      return decrypted;
+    } catch (e) {
+      debugPrint('Error decrypting message: $e');
+      return 'Error decrypting message';
+    }
   }
 }

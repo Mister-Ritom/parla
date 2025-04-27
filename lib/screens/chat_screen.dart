@@ -68,7 +68,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final message = messageController.text.trim();
     if (message.isEmpty) return;
 
-    final encrypted = EncryptionManager.encryptMessage(message, token!);
+    final encrypted = EncryptionManager.encryptMessage(message, token);
     final data = {
       'message': encrypted['base64'],
       'iv': encrypted['iv'],
