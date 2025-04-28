@@ -10,8 +10,15 @@ import 'package:visibility_detector/visibility_detector.dart';
 
 class ChatScreen extends StatefulWidget {
   final String receiverId;
+  final String? receiverName;
+  final String? receiverPhotoUrl;
 
-  const ChatScreen({super.key, required this.receiverId});
+  const ChatScreen({
+    super.key,
+    required this.receiverId,
+    this.receiverName,
+    this.receiverPhotoUrl,
+  });
 
   @override
   State<StatefulWidget> createState() => _ChatScreenState();
@@ -52,12 +59,12 @@ class _ChatScreenState extends State<ChatScreen> {
       if (snapshot.exists && snapshot.data()?['token'] != null) {
         String? dataToken = snapshot.data()?['token'];
         if (dataToken != null) {
-          await TokenManager.saveToken(currentUserId, dataToken);
+          await TokenManager.saveToken(widget.receiverId, dataToken);
           return dataToken;
         }
       } else {
         String newToken = await createNewToken();
-        await TokenManager.saveToken(currentUserId, newToken);
+        await TokenManager.saveToken(widget.receiverId, newToken);
       }
     }
     //If we reach here, it means we need to create a new token
@@ -78,27 +85,34 @@ class _ChatScreenState extends State<ChatScreen> {
       'receiverId': widget.receiverId,
     };
 
-    final userRef =
-        FirebaseFirestore.instance
-            .collection('messages')
-            .doc(currentUserId)
-            .collection('receivers')
-            .doc(widget.receiverId)
-            .collection('chat')
-            .doc();
+    final timeData = {'createdAt': FieldValue.serverTimestamp()};
 
-    final receiverRef =
-        FirebaseFirestore.instance
-            .collection('messages')
-            .doc(widget.receiverId)
-            .collection('receivers')
-            .doc(currentUserId)
-            .collection('chat')
-            .doc();
+    final userRef = FirebaseFirestore.instance
+        .collection('messages')
+        .doc(currentUserId)
+        .collection('receivers')
+        .doc(widget.receiverId);
+
+    final receiverRef = FirebaseFirestore.instance
+        .collection('messages')
+        .doc(widget.receiverId)
+        .collection('receivers')
+        .doc(currentUserId);
+
+    final userChat = userRef.collection('chat').doc();
+    final receiverChat = receiverRef.collection('chat').doc();
 
     final batch = FirebaseFirestore.instance.batch();
-    batch.set(userRef, data);
-    batch.set(receiverRef, data);
+    // This is a preventive measure so firestore actully query the data
+    final refData = await userRef.get();
+    if (!refData.exists) {
+      //If one exists then both should exist
+      batch.set(userRef, timeData);
+      batch.set(receiverRef, timeData);
+    }
+
+    batch.set(userChat, data);
+    batch.set(receiverChat, data);
     await batch.commit();
 
     messageController.clear();
@@ -165,11 +179,12 @@ class _ChatScreenState extends State<ChatScreen> {
           return const Center(child: Text('Error loading token'));
         } else {
           String token = snapshot.data as String;
-          debugPrint('Token: $token');
-          debugPrint('Current User ID: $currentUserId');
-          debugPrint('Receiver ID: ${widget.receiverId}');
           return Scaffold(
-            appBar: AppBar(title: Text('Chat with ${widget.receiverId}')),
+            appBar: AppBar(
+              title: Text(
+                'Chat with ${widget.receiverName ?? widget.receiverId}',
+              ),
+            ),
             body: Column(
               children: [
                 Expanded(
