@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:parla/screens/users/edit_profile_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:parla/auth/auth_provider.dart' as local;
 
 class ProfileScreen extends StatelessWidget {
   final String userId;
@@ -106,6 +108,47 @@ class ProfileScreen extends StatelessWidget {
                   userData['email'] ?? 'no email',
                   style: const TextStyle(fontSize: 16, color: Colors.grey),
                 ),
+                const SizedBox(height: 8),
+                Provider.of<local.AuthProvider>(
+                      context,
+                      listen: false,
+                    ).nonNullUser.emailVerified
+                    ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          FontAwesomeIcons.circleCheck,
+                          color: Colors.green,
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('Email Verified'),
+                      ],
+                    )
+                    : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          FontAwesomeIcons.circleExclamation,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(width: 8),
+                        Column(
+                          children: [
+                            const Text('Email Not Verified'),
+                            TextButton(
+                              onPressed: () async {
+                                Provider.of<local.AuthProvider>(
+                                  context,
+                                  listen: false,
+                                ).nonNullUser.sendEmailVerification();
+                              },
+                              child: const Text('Resend Verification Email'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                const SizedBox(height: 8),
                 Text(userId),
               ],
             ),

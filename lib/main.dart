@@ -36,10 +36,15 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
         textTheme: TextTheme(
-          displayLarge: GoogleFonts.montserrat(),
-          headlineMedium: GoogleFonts.lato(),
-          bodyLarge: GoogleFonts.roboto(),
-          bodyMedium: GoogleFonts.roboto(),
+          headlineMedium: GoogleFonts.lato().copyWith(
+            fontFamilyFallback: ['Roboto'],
+          ),
+          bodyLarge: GoogleFonts.roboto().copyWith(
+            fontFamilyFallback: ['Roboto'],
+          ),
+          bodyMedium: GoogleFonts.roboto().copyWith(
+            fontFamilyFallback: ['Roboto'],
+          ),
         ),
       ),
       darkTheme: ThemeData(
@@ -52,10 +57,15 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
         textTheme: TextTheme(
-          displayLarge: GoogleFonts.montserrat(),
-          headlineMedium: GoogleFonts.lato(),
-          bodyLarge: GoogleFonts.roboto(),
-          bodyMedium: GoogleFonts.roboto(),
+          headlineMedium: GoogleFonts.lato().copyWith(
+            fontFamilyFallback: ['Roboto'],
+          ),
+          bodyLarge: GoogleFonts.roboto().copyWith(
+            fontFamilyFallback: ['Roboto'],
+          ),
+          bodyMedium: GoogleFonts.roboto().copyWith(
+            fontFamilyFallback: ['Roboto'],
+          ),
         ),
       ),
       themeMode: ThemeMode.system,

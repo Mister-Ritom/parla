@@ -1,16 +1,17 @@
-# parla
+# Parla: The Next-Gen Chat App
 
-A new Flutter project.
+Welcome to **Parla**, the innovative chat application designed with your privacy in mind. Parla redefines secure communication by combining cutting-edge encryption with a commitment to data minimalism.
 
-## Getting Started
+## Key Features
 
-This project is a starting point for a Flutter application.
+- **End-to-End Encryption**: Every message you send is encrypted on your device and can only be decrypted by the recipient. No one else—not even Parla—can read your messages.
 
-A few resources to get you started if this is your first Flutter project:
+- **Ephemeral Storage**: Messages are never stored in plain text on our servers. Only the encrypted versions are temporarily stored, ensuring maximum security.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- **Zero-Access Database**: Even our database cannot decrypt your messages. Your privacy is guaranteed by design.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Why Choose Parla?
+
+Parla is built for those who value their privacy and want a seamless, secure messaging experience. With Parla, your conversations are yours and yours alone.
+
+### Start chatting securely with Parla today!
