@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:parla/auth/auth_provider.dart';
 import 'package:parla/auth/auth_gate.dart';
 import 'package:parla/firebase_options.dart';
@@ -31,9 +32,15 @@ class MyApp extends StatelessWidget {
         focusColor: Colors.lightBlue,
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.deepPurple,
-          secondary: Colors.amber,
+          secondary: Colors.blueAccent,
         ),
         useMaterial3: true,
+        textTheme: TextTheme(
+          displayLarge: GoogleFonts.montserrat(),
+          headlineMedium: GoogleFonts.lato(),
+          bodyLarge: GoogleFonts.roboto(),
+          bodyMedium: GoogleFonts.roboto(),
+        ),
       ),
       darkTheme: ThemeData(
         brightness: Brightness.dark,
@@ -41,10 +48,17 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(
           brightness: Brightness.dark,
           seedColor: Colors.purple,
-          secondary: Colors.amber,
+          secondary: Colors.blueAccent,
         ),
         useMaterial3: true,
+        textTheme: TextTheme(
+          displayLarge: GoogleFonts.montserrat(),
+          headlineMedium: GoogleFonts.lato(),
+          bodyLarge: GoogleFonts.roboto(),
+          bodyMedium: GoogleFonts.roboto(),
+        ),
       ),
+      themeMode: ThemeMode.system,
       home: const AuthGate(),
     );
   }

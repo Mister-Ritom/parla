@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:parla/auth/auth_provider.dart' show AuthProvider;
 import 'package:parla/screens/chat_screen.dart';
+import 'package:provider/provider.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -74,6 +76,14 @@ class _SearchScreenState extends State<SearchScreen> {
                           }
                           final user =
                               users[0]; //There can only be one user with a username
+                          //check if the user is the current user
+                          if (user['uid'] ==
+                              Provider.of<AuthProvider>(
+                                context,
+                                listen: false,
+                              ).nonNullUser.uid) {
+                            return Center(child: Text('Feeling lonely?'));
+                          }
                           return SizedBox(
                             height: 100,
                             child: ListTile(

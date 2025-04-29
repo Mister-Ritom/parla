@@ -47,15 +47,25 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<String> setupToken() async {
+    final snapshot =
+        await FirebaseFirestore.instance
+            .collection('chatManifest')
+            .doc(widget.receiverId)
+            .get();
     String? existingToken = await TokenManager.getToken(widget.receiverId);
     if (existingToken != null) {
+      if (!snapshot.exists) {
+        // If the token exists but the firestore document doesn't, create a new one
+        await FirebaseFirestore.instance
+            .collection('chatManifest')
+            .doc(widget.receiverId)
+            .set({
+              "token": existingToken,
+              "createdAt": FieldValue.serverTimestamp(),
+            });
+      }
       return existingToken;
     } else {
-      final snapshot =
-          await FirebaseFirestore.instance
-              .collection('chatManifest')
-              .doc(currentUserId)
-              .get();
       if (snapshot.exists && snapshot.data()?['token'] != null) {
         String? dataToken = snapshot.data()?['token'];
         if (dataToken != null) {
@@ -85,8 +95,6 @@ class _ChatScreenState extends State<ChatScreen> {
       'receiverId': widget.receiverId,
     };
 
-    final timeData = {'createdAt': FieldValue.serverTimestamp()};
-
     final userRef = FirebaseFirestore.instance
         .collection('messages')
         .doc(currentUserId)
@@ -100,15 +108,15 @@ class _ChatScreenState extends State<ChatScreen> {
         .doc(currentUserId);
 
     final userChat = userRef.collection('chat').doc();
-    final receiverChat = receiverRef.collection('chat').doc();
+    final receiverChat = receiverRef.collection('chat').doc(userChat.id);
 
     final batch = FirebaseFirestore.instance.batch();
     // This is a preventive measure so firestore actully query the data
     final refData = await userRef.get();
     if (!refData.exists) {
       //If one exists then both should exist
-      batch.set(userRef, timeData);
-      batch.set(receiverRef, timeData);
+      batch.set(userRef, {'createdAt': FieldValue.serverTimestamp()});
+      batch.set(receiverRef, {'createdAt': FieldValue.serverTimestamp()});
     }
 
     batch.set(userChat, data);
@@ -120,6 +128,175 @@ class _ChatScreenState extends State<ChatScreen> {
       0,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOut,
+    );
+  }
+
+  Widget _buildChatBubble(String message, Map<String, dynamic> msgData) {
+    final DateTime? timestamp = msgData['timestamp']?.toDate();
+    final bool isRead = msgData['isRead'] as bool;
+    final bool isCurrentUser = msgData['senderId'] == currentUserId;
+    final Duration? timeDifference =
+        timestamp != null ? DateTime.now().difference(timestamp) : null;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      child: Row(
+        mainAxisAlignment:
+            isCurrentUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment:
+            CrossAxisAlignment.end, // Align text and read receipt
+        children: [
+          if (!isCurrentUser)
+            widget.receiverPhotoUrl != null
+                ? CircleAvatar(
+                  backgroundImage: NetworkImage(widget.receiverPhotoUrl!),
+                  radius: 20,
+                )
+                : Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                  child: const Icon(FontAwesomeIcons.user, size: 22),
+                ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Column(
+              crossAxisAlignment:
+                  isCurrentUser
+                      ? CrossAxisAlignment.end
+                      : CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color:
+                        isCurrentUser
+                            ? Theme.of(context).colorScheme.secondary
+                            : Theme.of(context).brightness == Brightness.dark
+                            ? Theme.of(context).colorScheme.inversePrimary
+                            : Theme.of(context).colorScheme.primary,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    message,
+                    style: TextStyle(
+                      color: isCurrentUser ? Colors.white : null,
+                    ),
+                  ),
+                ),
+                if (timeDifference != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: Text(
+                      _formatTimeDifference(timeDifference),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 10),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (isCurrentUser)
+            Padding(
+              padding: const EdgeInsets.only(left: 8.0, bottom: 3),
+              child: Icon(
+                isRead ? Icons.done_all : Icons.done,
+                color: Theme.of(context).colorScheme.primary,
+                size: 16,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _formatTimeDifference(Duration duration) {
+    if (duration.inMinutes < 1) {
+      return 'Just now';
+    } else if (duration.inMinutes < 60) {
+      return '${duration.inMinutes} min ago';
+    } else if (duration.inHours < 24) {
+      return '${duration.inHours} hour${duration.inHours == 1 ? '' : 's'} ago';
+    } else {
+      return '${duration.inDays} day${duration.inDays == 1 ? '' : 's'} ago';
+    }
+  }
+
+  Widget _buildMessageInput(String token) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Container(
+        // decoration stuff to make ti look like card
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primaryContainer,
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(color: Theme.of(context).dividerColor, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Theme.of(context).shadowColor,
+              blurRadius: 5,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(4),
+        child: Row(
+          children: [
+            IconButton(
+              icon: Icon(Icons.link),
+              onPressed: () {
+                // Link action on the left
+              },
+            ),
+            Container(
+              width: 1,
+              height: 40,
+              color: Theme.of(context).dividerColor,
+            ),
+            Expanded(
+              child: TextField(
+                controller: messageController,
+                decoration: InputDecoration(
+                  hintText: 'Type your message...',
+                  border: InputBorder.none, // Remove the underline
+                  contentPadding: EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 12,
+                  ), // Adjust inner padding
+                ),
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) {
+                  sendMessage(token);
+                },
+              ),
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(
+                    Icons.mood, // Using Material Icons for closer resemblance
+                  ),
+                  onPressed: () {
+                    // Emoji action
+                  },
+                ),
+                SizedBox(width: 8), // Add some spacing
+                IconButton(
+                  icon: Icon(
+                    Icons.mic, // Using Material Icons for closer resemblance
+                  ),
+                  onPressed: () {
+                    // Voice action
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -153,16 +330,7 @@ class _ChatScreenState extends State<ChatScreen> {
               docRef.update({'isRead': true});
             }
           },
-          child: ListTile(
-            title: Text(message),
-            trailing: Icon(
-              msgData['isRead']
-                  ? FontAwesomeIcons.checkDouble
-                  : FontAwesomeIcons.check,
-              size: 16,
-            ),
-            subtitle: Text(msgData['timestamp']?.toDate().toString() ?? ''),
-          ),
+          child: _buildChatBubble(message, msgData),
         );
       },
     );
@@ -184,6 +352,29 @@ class _ChatScreenState extends State<ChatScreen> {
               title: Text(
                 'Chat with ${widget.receiverName ?? widget.receiverId}',
               ),
+              elevation: 0,
+              actions: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).highlightColor,
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 5,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  margin: const EdgeInsets.only(right: 12),
+                  child: IconButton(
+                    icon: const Icon(FontAwesomeIcons.ellipsis),
+                    onPressed: () {},
+                  ),
+                ),
+              ],
             ),
             body: Column(
               children: [
@@ -206,27 +397,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     },
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: messageController,
-                          decoration: const InputDecoration(
-                            hintText: 'Type a message...',
-                            border: OutlineInputBorder(),
-                          ),
-                          onSubmitted: (_) => sendMessage(token),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.send),
-                        onPressed: () => sendMessage(token),
-                      ),
-                    ],
-                  ),
-                ),
+                _buildMessageInput(token),
               ],
             ),
           );

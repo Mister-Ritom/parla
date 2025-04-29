@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -85,9 +83,6 @@ class _HomeScreenState extends State<HomeScreen> {
             return const Center(child: Text('No messages found.'));
           }
 
-          log('snapshot: ${snapshot.data?.docs.length}');
-          log('user id: ${user.uid}');
-
           final receiverIds = snapshot.data!.docs.map((doc) => doc.id).toList();
 
           return ListView.builder(
@@ -146,11 +141,10 @@ class _HomeScreenState extends State<HomeScreen> {
           return const SizedBox.shrink();
         }
 
-        final userData = userDocSnapshot.data!;
+        final userData = userDocSnapshot.data!.data() as Map<String, dynamic>;
         final encrypted = messageData['message'];
         final iv = messageData['iv'];
         final timestamp = messageData['timestamp'];
-
         return FutureBuilder<String?>(
           future: TokenManager.getToken(receiverId),
           builder: (context, tokenSnapshot) {
@@ -170,10 +164,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
             return ListTile(
               title: Text(userData['name']),
-              subtitle: Text(message),
-              trailing: Text(
-                '${timestamp.toDate().hour}:${timestamp.toDate().minute}',
+              //subtitle is message with a maximum of 100 characters
+              subtitle: Text(
+                message.length > 100
+                    ? '${message.substring(0, 100)}...'
+                    : message,
               ),
+              trailing: Text(
+                '${timestamp?.toDate().hour}:${timestamp?.toDate().minute}',
+              ),
+              leading:
+                  userData['photoUrl'] != null
+                      ? CircleAvatar(
+                        backgroundImage: NetworkImage(userData['photoUrl']),
+                      )
+                      : const Icon(Icons.person),
               onTap: () {
                 Navigator.push(
                   context,
@@ -182,6 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         (context) => ChatScreen(
                           receiverId: receiverId,
                           receiverName: userData['name'],
+                          receiverPhotoUrl: userData['photoUrl'],
                         ),
                   ),
                 );
