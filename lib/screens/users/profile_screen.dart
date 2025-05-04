@@ -24,6 +24,12 @@ class ProfileScreen extends StatelessWidget {
     }
   }
 
+  bool isCurrentUser(context) {
+    final currentUser =
+        Provider.of<local.AuthProvider>(context, listen: false).nonNullUser;
+    return currentUser.uid == userId;
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<Map<String, dynamic>?>(
@@ -64,20 +70,33 @@ class ProfileScreen extends StatelessWidget {
                   }
                 },
                 itemBuilder:
-                    (context) => [
-                      const PopupMenuItem(
-                        value: 'signout',
-                        child: Text('Sign Out'),
-                      ),
-                      const PopupMenuItem(
-                        value: 'settings',
-                        child: Text('Settings'),
-                      ),
-                      const PopupMenuItem(
-                        value: 'edit',
-                        child: Text('Edit Profile'),
-                      ),
-                    ],
+                    (context) =>
+                        isCurrentUser(context)
+                            ? [
+                              const PopupMenuItem(
+                                value: 'signout',
+                                child: Text('Sign Out'),
+                              ),
+                              const PopupMenuItem(
+                                value: 'settings',
+                                child: Text('Settings'),
+                              ),
+                              const PopupMenuItem(
+                                value: 'edit',
+                                child: Text('Edit Profile'),
+                              ),
+                            ]
+                            : [
+                              //buttons to block and report
+                              const PopupMenuItem(
+                                value: 'block',
+                                child: Text('Block'),
+                              ),
+                              const PopupMenuItem(
+                                value: 'report',
+                                child: Text('Report'),
+                              ),
+                            ],
               ),
             ],
           ),
