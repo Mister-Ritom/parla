@@ -371,7 +371,43 @@ class _ChatScreenState extends State<ChatScreen> {
                   margin: const EdgeInsets.only(right: 12),
                   child: IconButton(
                     icon: const Icon(FontAwesomeIcons.ellipsis),
-                    onPressed: () {},
+                    onPressed: () {
+                      // Handle the action when the icon is pressed
+                      showModalBottomSheet(
+                        context: context,
+                        builder: (context) {
+                          return Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary,
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(16),
+                                topRight: Radius.circular(16),
+                              ),
+                            ),
+                            height: 200,
+                            child: Column(
+                              children: [
+                                ListTile(
+                                  leading: const Icon(Icons.block),
+                                  title: const Text('Block User'),
+                                  onTap: () {
+                                    // Handle block user action
+                                  },
+                                ),
+                                ListTile(
+                                  leading: const Icon(Icons.report),
+                                  title: const Text('Report User'),
+                                  onTap: () {
+                                    // Handle report user action
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
                 ),
               ],
@@ -388,7 +424,9 @@ class _ChatScreenState extends State<ChatScreen> {
                             .doc(widget.receiverId)
                             .collection('chat')
                             .orderBy('timestamp', descending: true)
+                            .limit(10)
                             .snapshots(),
+
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) {
                         return const Center(child: CircularProgressIndicator());
