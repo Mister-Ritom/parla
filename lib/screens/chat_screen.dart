@@ -64,6 +64,9 @@ class _ChatScreenState extends State<ChatScreen> {
               "createdAt": FieldValue.serverTimestamp(),
             });
       }
+      // If the token exists and the firestore document exists, delete the token from firestore
+      // and return the existing token
+      deleteToken();
       return existingToken;
     } else {
       if (snapshot.exists && snapshot.data()?['token'] != null) {
@@ -79,6 +82,14 @@ class _ChatScreenState extends State<ChatScreen> {
     }
     //If we reach here, it means we need to create a new token
     return await createNewToken();
+  }
+
+  Future<void> deleteToken() async {
+    await FirebaseFirestore.instance
+        .collection('chatManifest')
+        .doc(widget.receiverId)
+        .delete();
+    await TokenManager.deleteToken(widget.receiverId);
   }
 
   Future<void> sendMessage(String token) async {
@@ -336,8 +347,114 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
+  //Checks if current user has blocked the receiver
+  Future<bool> checkBlocked() async {
+    final snapshot =
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUserId)
+            .collection('blockedUsers')
+            .doc(widget.receiverId)
+            .get();
+    return snapshot.exists;
+  }
+
+  //Checks if the receiver has blocked the current user
+  Future<bool> checkBlockedByReceiver() async {
+    final snapshot =
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(widget.receiverId)
+            .collection('blockedUsers')
+            .doc(currentUserId)
+            .get();
+    return snapshot.exists;
+  }
+
+  //Block the receiver
+  Future<void> blockReceiver() async {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUserId)
+        .collection('blockedUsers')
+        .doc(widget.receiverId)
+        .set({'blockedAt': FieldValue.serverTimestamp()});
+  }
+
+  Widget buildBlockedScreen() {
+    //Tell the user that they have been blocked by the receiver
+    return Scaffold(
+      appBar: AppBar(title: Text('Blocked')),
+      body: Center(
+        child: Text(
+          'You have been blocked by ${widget.receiverName ?? widget.receiverId}',
+          style: TextStyle(fontSize: 18),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBlockWarning() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      color: Colors.red[50],
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            'You have blocked this user. Unblock to send messages.',
+            style: TextStyle(color: Colors.red),
+          ),
+          TextButton(
+            onPressed: () async {
+              //Show confirmation dialog
+              final shouldUnblock = await showDialog<bool>(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: const Text('Unblock User'),
+                    content: const Text(
+                      'Are you sure you want to unblock this user?',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: const Text('Unblock'),
+                      ),
+                    ],
+                  );
+                },
+              );
+              //shouldUnblock is null if the dialog was closed so we check if it is true
+              if (shouldUnblock == true) {
+                await FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(currentUserId)
+                    .collection('blockedUsers')
+                    .doc(widget.receiverId)
+                    .delete();
+                if (!mounted || !context.mounted) return;
+                Navigator.of(context).pop();
+                // Show a snackbar or toast to inform the user
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('User unblocked')));
+                //Update the Ui
+                setState(() {});
+              }
+            },
+            child: const Text('Unblock'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildChatScreen(BuildContext context) {
     return FutureBuilder(
       future: setupToken(),
       builder: (context, snapshot) {
@@ -348,70 +465,7 @@ class _ChatScreenState extends State<ChatScreen> {
         } else {
           String token = snapshot.data as String;
           return Scaffold(
-            appBar: AppBar(
-              title: Text(
-                'Chat with ${widget.receiverName ?? widget.receiverId}',
-              ),
-              elevation: 0,
-              actions: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).highlightColor,
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 5,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  margin: const EdgeInsets.only(right: 12),
-                  child: IconButton(
-                    icon: const Icon(FontAwesomeIcons.ellipsis),
-                    onPressed: () {
-                      // Handle the action when the icon is pressed
-                      showModalBottomSheet(
-                        context: context,
-                        builder: (context) {
-                          return Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary,
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(16),
-                                topRight: Radius.circular(16),
-                              ),
-                            ),
-                            height: 200,
-                            child: Column(
-                              children: [
-                                ListTile(
-                                  leading: const Icon(Icons.block),
-                                  title: const Text('Block User'),
-                                  onTap: () {
-                                    // Handle block user action
-                                  },
-                                ),
-                                ListTile(
-                                  leading: const Icon(Icons.report),
-                                  title: const Text('Report User'),
-                                  onTap: () {
-                                    // Handle report user action
-                                  },
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
+            appBar: buildAppbar(context),
             body: Column(
               children: [
                 Expanded(
@@ -435,10 +489,147 @@ class _ChatScreenState extends State<ChatScreen> {
                     },
                   ),
                 ),
-                _buildMessageInput(token),
+                //If user has blocked receiver show warning else show the input
+                //check with future builder if the user has blocked the receiver
+                FutureBuilder<bool>(
+                  future: checkBlocked(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (snapshot.hasError) {
+                      return const Center(
+                        child: Text('Error loading block status'),
+                      );
+                    } else if (snapshot.data == true) {
+                      return _buildBlockWarning();
+                    } else {
+                      return _buildMessageInput(token);
+                    }
+                  },
+                ),
               ],
             ),
           );
+        }
+      },
+    );
+  }
+
+  AppBar buildAppbar(BuildContext context) {
+    return AppBar(
+      title: Text('Chat with ${widget.receiverName ?? widget.receiverId}'),
+      elevation: 0,
+      actions: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: Theme.of(context).highlightColor,
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 5,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          margin: const EdgeInsets.only(right: 12),
+          child: IconButton(
+            icon: const Icon(FontAwesomeIcons.ellipsis),
+            onPressed: () {
+              // Handle the action when the icon is pressed
+              showModalBottomSheet(
+                context: context,
+                builder: (context) {
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        topRight: Radius.circular(16),
+                      ),
+                    ),
+                    height: 200,
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.block),
+                          title: const Text('Block User'),
+                          onTap: () async {
+                            //Show confirmation dialog
+                            final shouldBlock = await showDialog<bool>(
+                              context: context,
+                              builder: (context) {
+                                return AlertDialog(
+                                  title: const Text('Block User'),
+                                  content: const Text(
+                                    'Are you sure you want to block this user?',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed:
+                                          () =>
+                                              Navigator.of(context).pop(false),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    TextButton(
+                                      onPressed:
+                                          () => Navigator.of(context).pop(true),
+                                      child: const Text('Block'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                            //shouldBlock is null if the dialog was closed so we check if it is true
+                            if (shouldBlock == true) {
+                              await blockReceiver();
+                              if (!mounted || !context.mounted) return;
+                              Navigator.of(context).pop();
+                              // Show a snackbar or toast to inform the user
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('User blocked')),
+                              );
+                              //Update the Ui
+                              setState(() {});
+                            }
+                          },
+                        ),
+
+                        ListTile(
+                          leading: const Icon(Icons.report),
+                          title: const Text('Report User'),
+                          onTap: () {
+                            // Handle report user action
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: checkBlockedByReceiver(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return const Center(child: Text('Error loading block status'));
+        } else if (snapshot.data == true) {
+          return buildBlockedScreen();
+        } else {
+          return buildChatScreen(context);
         }
       },
     );

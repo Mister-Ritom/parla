@@ -19,4 +19,9 @@ class TokenManager {
   static Future<String?> getToken(String chatId) async {
     return await _storage.read(key: '$_prefix$chatId');
   }
+
+  static Future<void> deleteToken(String chatId) async {
+    log('Deleting token for chatId: $chatId');
+    await _storage.delete(key: '$_prefix$chatId');
+  }
 }
