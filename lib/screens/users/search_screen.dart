@@ -77,7 +77,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           final user =
                               users[0]; //There can only be one user with a username
                           //check if the user is the current user
-                          if (user['uid'] ==
+                          if (user.id ==
                               Provider.of<AuthProvider>(
                                 context,
                                 listen: false,
@@ -98,7 +98,8 @@ class _SearchScreenState extends State<SearchScreen> {
                                         (context) => ChatScreen(
                                           receiverId: user.id,
                                           receiverName: user['username'],
-                                          receiverPhotoUrl: user['photoUrl'],
+                                          receiverPhotoUrl:
+                                              user['photoUrl'] ?? '',
                                         ),
                                   ),
                                 );
